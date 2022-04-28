@@ -4,10 +4,15 @@ use Proyect\Root\Root;
 
 class Config
 {
-	// TODO: caching
+	private static array $cache = [];
+
+	// TODO: external caching (symfony/cache)
 
 	public static function get(string $key, callable $default): array
 	{
+		if (isset(self::$cache[$key]))
+			return self::$cache[$key];
+
 		$root = Root::root();
 
 		if (!is_dir($root . '/app/config'))
@@ -25,6 +30,7 @@ class Config
 			file_put_contents($filepath, "<?php\nreturn " . $default);
 		}
 
-		return require($filepath);
+		self::$cache[$key] = require($filepath);
+		return self::$cache[$key];
 	}
 }
