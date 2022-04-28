@@ -27,7 +27,7 @@ class Config
 			if (!is_string($default))
 				$default = var_export($default, true);
 
-			file_put_contents($filepath, "<?php\nreturn " . $default);
+			file_put_contents($filepath, "<?php\nreturn " . $default . ";\n");
 		}
 
 		self::$cache[$key] = require($filepath);
