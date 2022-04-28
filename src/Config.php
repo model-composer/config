@@ -6,7 +6,7 @@ class Config
 {
 	// TODO: caching
 
-	public static function get(string $key, array|callable $default): array
+	public static function get(string $key, callable $default): array
 	{
 		$root = Root::root();
 
@@ -18,9 +18,7 @@ class Config
 		$filepath = $root . '/app/config/' . $key . '.php';
 
 		if (!file_exists($filepath)) {
-			if (is_callable($default))
-				$default = call_user_func($default);
-
+			$default = call_user_func($default);
 			if (!is_string($default))
 				$default = var_export($default, true);
 
