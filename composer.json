@@ -1,0 +1,17 @@
+{
+    "name": "model/config",
+    "description": "Configuration helper for ModEl Framework",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Domenico Giambra",
+            "email": "zorinik@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {"Model\\Config\\": "src/"}
+    },
+    "require": {
+        "aldarien/root": "^1.0"
+    }
+}
