@@ -13,10 +13,11 @@ class Config
 	 *
 	 * @param string $key
 	 * @param callable $default
+	 * @param callable|null $migrateFunction - Migration function from ModEl v3 - Takes the whole file (string) as input and returns a new string
 	 * @return array
 	 * @throws \Exception
 	 */
-	public static function get(string $key, callable $default): array
+	public static function get(string $key, callable $default, ?callable $migrateFunction = null): array
 	{
 		if (isset(self::$cache[$key]))
 			return self::$cache[$key];
@@ -31,7 +32,7 @@ class Config
 		$filepath = $configPath . DIRECTORY_SEPARATOR . $key . '.php';
 
 		if (!file_exists($filepath)) {
-			if (!self::migrateOldConfig($key)) {
+			if (!self::migrateOldConfig($key, $migrateFunction)) {
 				$default = call_user_func($default);
 				if (!is_string($default))
 					$default = var_export($default, true);
@@ -60,18 +61,30 @@ class Config
 	 * Migration utility from ModEl v3 config files
 	 *
 	 * @param string $key
+	 * @param callable|null $migrateFunction
 	 * @return bool
 	 */
-	private static function migrateOldConfig(string $key): bool
+	private static function migrateOldConfig(string $key, ?callable $migrateFunction = null): bool
 	{
+		if ($migrateFunction === null) {
+			$migrateFunction = function (string $fileContent) {
+				if (str_starts_with($fileContent, "<?php\n\$config = "))
+					return str_replace("<?php\n\$config = ", "<?php\nreturn ", $fileContent);
+				else
+					return null;
+			};
+		}
+
 		$configPath = self::getConfigPath();
 		$oldKey = str_replace(' ', '', ucwords(str_replace('-', ' ', $key)));
 		if (file_exists($configPath . DIRECTORY_SEPARATOR . $oldKey . DIRECTORY_SEPARATOR . 'config.php')) {
 			$fileContent = file_get_contents($configPath . DIRECTORY_SEPARATOR . $oldKey . DIRECTORY_SEPARATOR . 'config.php');
-			if (str_starts_with($fileContent, "<?php\n\$config = ")) {
-				$fileContent = str_replace("<?php\n\$config = ", "<?php\nreturn ", $fileContent);
-				return (bool)file_put_contents($configPath . DIRECTORY_SEPARATOR . $key . '.php', $fileContent);
-			}
+
+			$migratedConfig = $migrateFunction($fileContent);
+			if ($migratedConfig !== null)
+				return (bool)file_put_contents($configPath . DIRECTORY_SEPARATOR . $key . '.php', $migratedConfig);
+
+			return false;
 		}
 
 		return false;

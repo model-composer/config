@@ -12,6 +12,7 @@
         "psr-4": {"Model\\Config\\": "src/"}
     },
     "require": {
-        "aldarien/root": "^1.0"
+        "aldarien/root": "^1.0",
+        "php": "^8.0"
     }
 }
