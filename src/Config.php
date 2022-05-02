@@ -13,7 +13,7 @@ class Config
 	 *
 	 * @param string $key
 	 * @param callable $default
-	 * @param callable|null $migrateFunction - Migration function from ModEl v3 - Takes the whole file (string) as input and returns a new string
+	 * @param callable|null $migrateFunction - Migration function from ModEl v3 - Takes the file path as a string and returns a new string
 	 * @return array
 	 * @throws \Exception
 	 */
@@ -67,7 +67,8 @@ class Config
 	private static function migrateOldConfig(string $key, ?callable $migrateFunction = null): bool
 	{
 		if ($migrateFunction === null) {
-			$migrateFunction = function (string $fileContent) {
+			$migrateFunction = function (string $configPath) {
+				$fileContent = file_get_contents($configPath);
 				if (str_starts_with($fileContent, "<?php\n\$config = "))
 					return str_replace("<?php\n\$config = ", "<?php\nreturn ", $fileContent);
 				else
@@ -78,9 +79,7 @@ class Config
 		$configPath = self::getConfigPath();
 		$oldKey = str_replace(' ', '', ucwords(str_replace('-', ' ', $key)));
 		if (file_exists($configPath . DIRECTORY_SEPARATOR . $oldKey . DIRECTORY_SEPARATOR . 'config.php')) {
-			$fileContent = file_get_contents($configPath . DIRECTORY_SEPARATOR . $oldKey . DIRECTORY_SEPARATOR . 'config.php');
-
-			$migratedConfig = $migrateFunction($fileContent);
+			$migratedConfig = $migrateFunction($configPath . DIRECTORY_SEPARATOR . $oldKey . DIRECTORY_SEPARATOR . 'config.php');
 			if ($migratedConfig !== null)
 				return (bool)file_put_contents($configPath . DIRECTORY_SEPARATOR . $key . '.php', $migratedConfig);
 
