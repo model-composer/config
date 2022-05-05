@@ -13,6 +13,10 @@
     },
     "require": {
         "aldarien/root": "^1.0",
-        "php": "^8.0"
+        "php": "^8.0",
+        "composer-runtime-api": "^2.1"
+    },
+    "suggest": {
+        "model/cache": "You can optionally cache your configs to redis via this library"
     }
 }

@@ -1,13 +1,12 @@
 <?php namespace Model\Config;
 
+use Composer\InstalledVersions;
 use Proyect\Root\Root;
 
 class Config
 {
-	// TODO: external caching (symfony/cache)
-
-	private static array $cache = [];
 	private static string $env = 'production';
+	private static array $internalCache = [];
 
 	/**
 	 * Env type setter
@@ -31,36 +30,61 @@ class Config
 	 */
 	public static function get(string $key, callable $default, ?callable $migrateFunction = null): array
 	{
-		if (!isset(self::$cache[$key])) {
-			$configPath = self::getConfigPath();
-
-			if (!is_dir($configPath))
-				mkdir($configPath, 0777, true);
-			if (!is_writable($configPath))
-				throw new \Exception('Config directory is not writable');
-
-			$filepath = $configPath . DIRECTORY_SEPARATOR . $key . '.php';
-
-			if (!file_exists($filepath)) {
-				if (!self::migrateOldConfig($key, $migrateFunction)) {
-					$default = call_user_func($default);
-					if (!is_array($default))
-						throw new \Exception('Default config must be an array');
-
-					if (!file_put_contents($filepath, "<?php\nreturn " . var_export(['production' => $default], true) . ";\n"))
-						throw new \Exception('Error while writing config file');
-				}
+		// If it's the first time for this run I'm requesting this config
+		if (!isset(self::$internalCache[$key])) {
+			if (InstalledVersions::isInstalled('model/cache') and InstalledVersions::isInstalled('model/redis')) { // If there is a redis caching library installed, I use it to retrieve it (or store it) from there
+				$cacheAdapter = \Model\Cache\Cache::getCacheAdapter('redis');
+				self::$internalCache[$key] = $cacheAdapter->get('model.jwt.key', function (\Symfony\Contracts\Cache\ItemInterface $item) use ($key, $default, $migrateFunction) {
+					$item->expiresAfter(60);
+					$item->tag('config');
+					return self::retrieveConfig($key, $default, $migrateFunction);
+				});
+			} else {
+				// Otherwise I just retrieve it from file
+				self::$internalCache[$key] = self::retrieveConfig($key, $default, $migrateFunction);
 			}
-
-			self::$cache[$key] = require($filepath);
 		}
 
-		if (isset(self::$cache[$key][self::$env]))
-			return self::$cache[$key];
-		elseif (count(self::$cache[$key]) > 0)
-			return reset(self::$cache[$key]);
+		if (isset(self::$internalCache[$key][self::$env]))
+			return self::$internalCache[$key];
+		elseif (count(self::$internalCache[$key]) > 0)
+			return reset(self::$internalCache[$key]);
 		else
 			return [];
+	}
+
+	/**
+	 * Internal method for retrieves config directly without cache
+	 *
+	 * @param string $key
+	 * @param callable $default
+	 * @param callable|null $migrateFunction
+	 * @return array
+	 * @throws \Exception
+	 */
+	private static function retrieveConfig(string $key, callable $default, ?callable $migrateFunction = null): array
+	{
+		$configPath = self::getConfigPath();
+
+		if (!is_dir($configPath))
+			mkdir($configPath, 0777, true);
+		if (!is_writable($configPath))
+			throw new \Exception('Config directory is not writable');
+
+		$filepath = $configPath . DIRECTORY_SEPARATOR . $key . '.php';
+
+		if (!file_exists($filepath)) {
+			if (!self::migrateOldConfig($key, $migrateFunction)) {
+				$default = call_user_func($default);
+				if (!is_array($default))
+					throw new \Exception('Default config must be an array');
+
+				if (!file_put_contents($filepath, "<?php\nreturn " . var_export(['production' => $default], true) . ";\n"))
+					throw new \Exception('Error while writing config file');
+			}
+		}
+
+		return require($filepath);
 	}
 
 	/**
