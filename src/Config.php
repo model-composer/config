@@ -4,46 +4,63 @@ use Proyect\Root\Root;
 
 class Config
 {
-	private static array $cache = [];
-
 	// TODO: external caching (symfony/cache)
+
+	private static array $cache = [];
+	private static string $env = 'production';
+
+	/**
+	 * Env type setter
+	 *
+	 * @param string $env
+	 * @return void
+	 */
+	public static function setEnv(string $env): void
+	{
+		self::$env = $env;
+	}
 
 	/**
 	 * Get specified config; if not present, gets the default
 	 *
 	 * @param string $key
-	 * @param callable $default
+	 * @param callable $default - Must return default config as an array
 	 * @param callable|null $migrateFunction - Migration function from ModEl v3 - Takes the file path as a string and returns a new string
 	 * @return array
 	 * @throws \Exception
 	 */
 	public static function get(string $key, callable $default, ?callable $migrateFunction = null): array
 	{
-		if (isset(self::$cache[$key]))
-			return self::$cache[$key];
+		if (!isset(self::$cache[$key])) {
+			$configPath = self::getConfigPath();
 
-		$configPath = self::getConfigPath();
+			if (!is_dir($configPath))
+				mkdir($configPath, 0777, true);
+			if (!is_writable($configPath))
+				throw new \Exception('Config directory is not writable');
 
-		if (!is_dir($configPath))
-			mkdir($configPath, 0777, true);
-		if (!is_writable($configPath))
-			throw new \Exception('Config directory is not writable');
+			$filepath = $configPath . DIRECTORY_SEPARATOR . $key . '.php';
 
-		$filepath = $configPath . DIRECTORY_SEPARATOR . $key . '.php';
+			if (!file_exists($filepath)) {
+				if (!self::migrateOldConfig($key, $migrateFunction)) {
+					$default = call_user_func($default);
+					if (!is_array($default))
+						throw new \Exception('Default config must be an array');
 
-		if (!file_exists($filepath)) {
-			if (!self::migrateOldConfig($key, $migrateFunction)) {
-				$default = call_user_func($default);
-				if (!is_string($default))
-					$default = var_export($default, true);
-
-				if (!file_put_contents($filepath, "<?php\nreturn " . $default . ";\n"))
-					throw new \Exception('Error while writing config file');
+					if (!file_put_contents($filepath, "<?php\nreturn " . var_export(['production' => $default], true) . ";\n"))
+						throw new \Exception('Error while writing config file');
+				}
 			}
+
+			self::$cache[$key] = require($filepath);
 		}
 
-		self::$cache[$key] = require($filepath);
-		return self::$cache[$key];
+		if (isset(self::$cache[$key][self::$env]))
+			return self::$cache[$key];
+		elseif (count(self::$cache[$key]) > 0)
+			return reset(self::$cache[$key]);
+		else
+			return [];
 	}
 
 	/**
@@ -68,11 +85,16 @@ class Config
 	{
 		if ($migrateFunction === null) {
 			$migrateFunction = function (string $configPath) {
-				$fileContent = file_get_contents($configPath);
-				if (str_starts_with($fileContent, "<?php\n\$config = "))
-					return str_replace("<?php\n\$config = ", "<?php\nreturn ", $fileContent);
-				else
+				require($configPath);
+				if (isset($config)) {
+					$config = [
+						'production' => $config,
+					];
+
+					return "<?php\nreturn " . var_export($config, true) . ";\n";
+				} else {
 					return null;
+				}
 			};
 		}
 
