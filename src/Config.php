@@ -46,7 +46,7 @@ class Config
 		}
 
 		if (isset(self::$internalCache[$key][self::$env]))
-			return self::$internalCache[$key];
+			return self::$internalCache[$key][self::$env];
 		elseif (count(self::$internalCache[$key]) > 0)
 			return reset(self::$internalCache[$key]);
 		else
