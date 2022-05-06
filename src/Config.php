@@ -95,7 +95,7 @@ class Config
 	private static function getConfigPath(): string
 	{
 		$root = Root::root();
-		return $root . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'config';
+		return $root . DIRECTORY_SEPARATOR . ($_ENV['CONFIG_PATH'] ?? 'config');
 	}
 
 	/**
