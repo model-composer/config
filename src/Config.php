@@ -34,7 +34,7 @@ class Config
 		if (!isset(self::$internalCache[$key])) {
 			if ($key !== 'redis' and InstalledVersions::isInstalled('model/cache') and InstalledVersions::isInstalled('model/redis')) { // If there is a redis caching library installed, I use it to retrieve it (or store it) from there
 				$cacheAdapter = \Model\Cache\Cache::getCacheAdapter('redis');
-				self::$internalCache[$key] = $cacheAdapter->get('model.config.' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($key, $default, $migrateFunction) {
+				self::$internalCache[$key] = $cacheAdapter->get('model:config:' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($key, $default, $migrateFunction) {
 					$item->expiresAfter(300);
 					$item->tag('config');
 					return self::retrieveConfig($key, $default, $migrateFunction);
