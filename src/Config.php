@@ -32,7 +32,7 @@ class Config
 	{
 		// If it's the first time for this run I'm requesting this config
 		if (!isset(self::$internalCache[$key])) {
-			if ($key !== 'redis' and InstalledVersions::isInstalled('model/cache') and InstalledVersions::isInstalled('model/redis')) { // If there is a redis caching library installed, I use it to retrieve it (or store it) from there
+			if ($key !== 'redis' and InstalledVersions::isInstalled('model/cache') and InstalledVersions::isInstalled('model/redis') and \Model\Redis\Redis::isEnabled()) { // If there is a redis caching library installed, I use it to retrieve it (or store it) from there
 				$cacheAdapter = \Model\Cache\Cache::getCacheAdapter('redis');
 				self::$internalCache[$key] = $cacheAdapter->get('model:config:' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($key, $default, $migrateFunction) {
 					$item->expiresAfter(300);
