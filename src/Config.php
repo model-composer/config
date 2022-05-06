@@ -2,21 +2,31 @@
 
 use Composer\InstalledVersions;
 use Proyect\Root\Root;
+use Symfony\Component\Dotenv\Dotenv;
 
 class Config
 {
-	private static string $env = 'production';
+	private static bool $envLoaded = false;
 	private static array $internalCache = [];
 
 	/**
-	 * Env type setter
+	 * Env type getter
 	 *
-	 * @param string $env
-	 * @return void
+	 * @return string
 	 */
-	public static function setEnv(string $env): void
+	private static function getEnv(): string
 	{
-		self::$env = $env;
+		if (!self::$envLoaded) {
+			$root = Root::root();
+			if (file_exists($root . DIRECTORY_SEPARATOR . '.env')) {
+				$dotenv = new Dotenv();
+				$dotenv->load($root . DIRECTORY_SEPARATOR . '.env');
+			}
+
+			self::$envLoaded = true;
+		}
+
+		return $_ENV['APP_ENV'] ?? $_ENV['ENVIRONMENT'] ?? 'production';
 	}
 
 	/**
@@ -45,8 +55,9 @@ class Config
 			}
 		}
 
-		if (isset(self::$internalCache[$key][self::$env]))
-			return self::$internalCache[$key][self::$env];
+		$env = self::getEnv();
+		if (isset(self::$internalCache[$key][$env]))
+			return self::$internalCache[$key][$env];
 		elseif (count(self::$internalCache[$key]) > 0)
 			return reset(self::$internalCache[$key]);
 		else
