@@ -10,11 +10,11 @@ class Config
 	private static array $internalCache = [];
 
 	/**
-	 * Env type getter
+	 * Load variables from .env file, if present
 	 *
-	 * @return string
+	 * @return void
 	 */
-	private static function getEnv(): string
+	public static function loadEnv(): void
 	{
 		if (!self::$envLoaded) {
 			$root = Root::root();
@@ -25,7 +25,16 @@ class Config
 
 			self::$envLoaded = true;
 		}
+	}
 
+	/**
+	 * Env type getter
+	 *
+	 * @return string
+	 */
+	public static function getEnv(): string
+	{
+		self::loadEnv();
 		return $_ENV['APP_ENV'] ?? $_ENV['ENVIRONMENT'] ?? 'production';
 	}
 
