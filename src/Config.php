@@ -61,6 +61,8 @@ class Config
 					$item->tag('config');
 					return self::retrieveConfig($key, $default, $migrateFunction);
 				});
+
+				\Model\Cache\Cache::registerInvalidation('tag', ['config']);
 			} else {
 				// Otherwise I just retrieve it from file
 				self::$internalCache[$key] = self::retrieveConfig($key, $default, $migrateFunction);
