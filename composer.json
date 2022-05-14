@@ -12,7 +12,6 @@
         "psr-4": {"Model\\Config\\": "src/"}
     },
     "require": {
-        "aldarien/root": "^1.0",
         "php": "^8.0",
         "composer-runtime-api": "^2.1",
         "symfony/dotenv": "^6.0"

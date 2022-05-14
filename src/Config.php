@@ -1,7 +1,6 @@
 <?php namespace Model\Config;
 
 use Composer\InstalledVersions;
-use Proyect\Root\Root;
 use Symfony\Component\Dotenv\Dotenv;
 
 class Config
@@ -17,10 +16,12 @@ class Config
 	public static function loadEnv(): void
 	{
 		if (!self::$envLoaded) {
-			$root = Root::root();
-			if (file_exists($root . DIRECTORY_SEPARATOR . '.env')) {
+			if (!defined('INCLUDE_PATH'))
+				throw new \Exception('Please define "INCLUDE_PATH" constant');
+
+			if (file_exists(INCLUDE_PATH . '.env')) {
 				$dotenv = new Dotenv();
-				$dotenv->load($root . DIRECTORY_SEPARATOR . '.env');
+				$dotenv->load(INCLUDE_PATH . '.env');
 			}
 
 			self::$envLoaded = true;
@@ -119,8 +120,7 @@ class Config
 	 */
 	private static function getConfigPath(): string
 	{
-		$root = Root::root();
-		return $root . DIRECTORY_SEPARATOR . ($_ENV['CONFIG_PATH'] ?? 'config');
+		return INCLUDE_PATH . ($_ENV['CONFIG_PATH'] ?? 'config');
 	}
 
 	/**
