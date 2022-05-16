@@ -16,9 +16,9 @@ class Config
 	public static function loadEnv(): void
 	{
 		if (!self::$envLoaded) {
-			if (file_exists('../../../../.env')) {
+			if (file_exists(self::getProjectRoot() . '.env')) {
 				$dotenv = new Dotenv();
-				$dotenv->load('../../../../.env');
+				$dotenv->load(self::getProjectRoot() . '.env');
 			}
 
 			self::$envLoaded = true;
@@ -148,6 +148,14 @@ class Config
 	 */
 	private static function getConfigPath(): string
 	{
-		return '../../../../' . ($_ENV['CONFIG_PATH'] ?? 'config');
+		return self::getProjectRoot() . ($_ENV['CONFIG_PATH'] ?? 'config');
+	}
+
+	/**
+	 * @return string
+	 */
+	private static function getProjectRoot(): string
+	{
+		return realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..') . '' . DIRECTORY_SEPARATOR;
 	}
 }
