@@ -131,7 +131,7 @@ class Config
 			$latestVersion = $migration['version'];
 		}
 
-		if ($config['meta']['version'] !== $latestVersion) {
+		if ($latestVersion !== null and $config['meta']['version'] !== $latestVersion) {
 			$config['meta']['version'] = $latestVersion;
 
 			if (!file_put_contents($filepath, "<?php\nreturn " . var_export($config, true) . ";\n"))
