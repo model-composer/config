@@ -33,7 +33,10 @@ class Config
 	public static function getEnv(): string
 	{
 		self::loadEnv();
-		return $_ENV['APP_ENV'] ?? $_ENV['ENVIRONMENT'] ?? 'production';
+		$env = $_ENV['APP_ENV'] ?? $_ENV['ENVIRONMENT'] ?? 'production';
+		if ($env === 'meta')
+			throw new \Exception('"meta" is a reserved keyword of model/config library, cannot be used as env type');
+		return $env;
 	}
 
 	/**
