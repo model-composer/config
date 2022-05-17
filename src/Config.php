@@ -70,12 +70,7 @@ class Config
 		}
 
 		$env = self::getEnv();
-		if (isset(self::$internalCache[$key][$env]))
-			return self::$internalCache[$key][$env];
-		elseif (count(self::$internalCache[$key]) > 0)
-			return reset(self::$internalCache[$key]);
-		else
-			return [];
+		return self::$internalCache[$key][$env] ?? self::$internalCache[$key]['production'] ?? [];
 	}
 
 	/**
