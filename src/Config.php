@@ -59,10 +59,11 @@ class Config
 				self::$internalCache[$key] = $cache->get('model.config.' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($key, $migrations) {
 					$item->expiresAfter(3600 * 24);
 					$item->tag('config');
+
+					\Model\Cache\Cache::registerInvalidation('tag', ['config'], 'redis');
+
 					return self::retrieveConfig($key, $migrations);
 				});
-
-				\Model\Cache\Cache::registerInvalidation('tag', ['config'], 'redis');
 			} else {
 				// Otherwise I just retrieve it from file
 				self::$internalCache[$key] = self::retrieveConfig($key, $migrations);
