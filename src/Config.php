@@ -18,7 +18,7 @@ class Config
 		if (!self::$envLoaded) {
 			if (file_exists(self::getProjectRoot() . '.env')) {
 				$dotenv = new Dotenv();
-				$dotenv->load(self::getProjectRoot() . '.env');
+				$dotenv->overload(self::getProjectRoot() . '.env');
 			}
 
 			self::$envLoaded = true;
@@ -155,6 +155,6 @@ class Config
 	 */
 	private static function getProjectRoot(): string
 	{
-		return realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..') . '' . DIRECTORY_SEPARATOR;
+		return realpath(__DIR__ . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..' . DIRECTORY_SEPARATOR . '..') . DIRECTORY_SEPARATOR;
 	}
 }
