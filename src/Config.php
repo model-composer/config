@@ -47,7 +47,7 @@ class Config
 	 * @return array
 	 * @throws \Exception
 	 */
-	public static function get(string $key, array $migrations = []): array
+	public static function get(string $key, array $migrations = [], array $enableTemplating = []): array
 	{
 		// If it's the first time for this run I'm requesting this config
 		if (!isset(self::$internalCache[$key])) {
@@ -71,7 +71,22 @@ class Config
 		}
 
 		$env = self::getEnv();
-		return self::$internalCache[$key][$env] ?? self::$internalCache[$key]['production'] ?? [];
+		$config = self::$internalCache[$key][$env] ?? self::$internalCache[$key]['production'] ?? [];
+
+		foreach ($enableTemplating as $path => $valueType) {
+			if (is_numeric($path)) {
+				$path = $valueType;
+				$valueType = 'string';
+			}
+
+			$path = trim($path);
+			if ($path === '')
+				continue;
+
+			$config = self::checkTemplating($config, $path, $valueType);
+		}
+
+		return $config;
 	}
 
 	/**
@@ -135,6 +150,83 @@ class Config
 
 			if (!file_put_contents($filepath, "<?php\nreturn " . var_export($config, true) . ";\n"))
 				throw new \Exception('Error while writing config file');
+		}
+
+		return $config;
+	}
+
+	/**
+	 * Replace config paths, if applicable
+	 *
+	 * @param array $config
+	 * @param string $path
+	 * @param string $valueType
+	 * @return array
+	 * @throws \Exception
+	 */
+	private static function checkTemplating(array $config, string $path, string $valueType): array
+	{
+		$path = explode('.', $path);
+
+		$configItem = &$config;
+		foreach ($path as $key) {
+			if (isset($configItem[$key]))
+				$configItem = &$configItem[$key];
+			else
+				return $config;
+		}
+
+		if (!is_string($configItem) or !preg_match('/^\{\{.+\}\}$/i', $configItem))
+			return $config;
+
+		$template = substr($configItem, 2, -2);
+		$exploded = explode('|', $template);
+		$template = explode('.', $exploded[0]);
+		$default = $exploded[1] ?? null;
+
+		$finalValue = null;
+		switch ($template[0]) {
+			case 'env':
+				$finalValue = $_ENV;
+				break;
+			case 'server':
+				$finalValue = $_SERVER;
+				break;
+			case 'session':
+				$finalValue = $_SESSION;
+				break;
+		}
+
+		array_shift($template);
+
+		foreach ($template as $key) {
+			if (array_key_exists($key, $finalValue)) {
+				$finalValue = $finalValue[$key];
+			} else {
+				$finalValue = $default;
+				break;
+			}
+		}
+
+		switch ($valueType) {
+			case 'string':
+				$configItem = (string)$finalValue;
+				break;
+
+			case 'int':
+				$configItem = (int)$finalValue;
+				break;
+
+			case 'float':
+				$configItem = (float)$finalValue;
+				break;
+
+			case 'bool':
+				$configItem = (bool)$finalValue;
+				break;
+
+			default:
+				throw new \Exception('Unsupported value type in config template');
 		}
 
 		return $config;
