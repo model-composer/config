@@ -90,6 +90,20 @@ class Config
 	}
 
 	/**
+	 * Stores new config
+	 *
+	 * @param string $key
+	 * @param array $config
+	 * @return void
+	 */
+	public static function set(string $key, array $config): void
+	{
+		$filepath = self::getConfigFilePath($key);
+		if (!file_put_contents($filepath, "<?php\nreturn " . var_export($config, true) . ";\n"))
+			throw new \Exception('Error while writing config file for ' . $key);
+	}
+
+	/**
 	 * Internal method for retrieving config directly without cache
 	 *
 	 * @param string $key
@@ -99,14 +113,7 @@ class Config
 	 */
 	private static function retrieveConfig(string $key, array $migrations = []): array
 	{
-		$configPath = self::getConfigPath();
-
-		if (!is_dir($configPath))
-			mkdir($configPath, 0777, true);
-		if (!is_writable($configPath))
-			throw new \Exception('Config directory is not writable');
-
-		$filepath = $configPath . DIRECTORY_SEPARATOR . $key . '.php';
+		$filepath = self::getConfigFilePath($key);
 
 		if (file_exists($filepath)) {
 			$config = require($filepath);
@@ -148,11 +155,28 @@ class Config
 		if ($latestVersion !== null and $config['meta']['version'] !== $latestVersion) {
 			$config['meta']['version'] = $latestVersion;
 
-			if (!file_put_contents($filepath, "<?php\nreturn " . var_export($config, true) . ";\n"))
-				throw new \Exception('Error while writing config file');
+			self::set($key, $config);
 		}
 
 		return $config;
+	}
+
+	/**
+	 * Returns full path to a config file
+	 *
+	 * @param string $key
+	 * @return string
+	 */
+	private static function getConfigFilePath(string $key): string
+	{
+		$configPath = self::getConfigPath();
+
+		if (!is_dir($configPath))
+			mkdir($configPath, 0777, true);
+		if (!is_writable($configPath))
+			throw new \Exception('Config directory is not writable');
+
+		return $configPath . DIRECTORY_SEPARATOR . $key . '.php';
 	}
 
 	/**
