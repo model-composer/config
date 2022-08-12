@@ -216,11 +216,22 @@ class Config
 		$path = explode('.', $path);
 
 		$configItem = &$config;
-		foreach ($path as $key) {
-			if (isset($configItem[$key]))
-				$configItem = &$configItem[$key];
-			else
+		foreach ($path as $pathIdx => $key) {
+			if (isset($configItem[$key])) {
+				if ($key === '*') {
+					if (is_array($configItem[$key])) {
+						array_splice($path, 0, $pathIdx + 1);
+						$configItem[$key] = self::checkTemplating($configItem[$key], implode('.', $path), $valueType);
+						return $config;
+					} else {
+						throw new \Exception('Templating with * is possible only on arrays');
+					}
+				} else {
+					$configItem = &$configItem[$key];
+				}
+			} else {
 				return $config;
+			}
 		}
 
 		if (!is_string($configItem) or !preg_match('/^\{\{.+\}\}$/i', $configItem))
