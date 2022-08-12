@@ -217,20 +217,21 @@ class Config
 
 		$configItem = &$config;
 		foreach ($path as $pathIdx => $key) {
-			if (isset($configItem[$key])) {
-				if ($key === '*') {
-					if (is_array($configItem[$key])) {
-						array_splice($path, 0, $pathIdx + 1);
-						$configItem[$key] = self::checkTemplating($configItem[$key], implode('.', $path), $valueType);
-						return $config;
-					} else {
-						throw new \Exception('Templating with * is possible only on arrays');
-					}
+			if ($key === '*') {
+				if (is_array($configItem)) {
+					array_splice($path, 0, $pathIdx + 1);
+					foreach ($configItem as &$subConfig)
+						$subConfig = self::checkTemplating($subConfig, implode('.', $path), $valueType);
+
+					return $config;
 				} else {
-					$configItem = &$configItem[$key];
+					throw new \Exception('Templating with * is possible only on arrays');
 				}
 			} else {
-				return $config;
+				if (isset($configItem[$key]))
+					$configItem = &$configItem[$key];
+				else
+					return $config;
 			}
 		}
 
