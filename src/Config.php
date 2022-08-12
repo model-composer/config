@@ -1,6 +1,7 @@
 <?php namespace Model\Config;
 
 use Composer\InstalledVersions;
+use Model\Cache\Cache as Cache;
 use Symfony\Component\Dotenv\Dotenv;
 
 class Config
@@ -51,16 +52,16 @@ class Config
 	{
 		// If it's the first time for this run I'm requesting this config
 		if (!isset(self::$internalCache[$key])) {
-			if (!in_array($key, ['redis', 'cache']) and InstalledVersions::isInstalled('model/cache') and InstalledVersions::isInstalled('model/redis') and \Model\Redis\Redis::isEnabled()) {
+			if (!in_array($key, ['redis', 'cache']) and self::isCacheEnabled()) {
 				// If there is a redis caching library installed, I use it to retrieve it (or store it) from there
 				// I do not cache config for "redis" and "cache" libraries, or it would result in an infinite recursion
 
-				$cache = \Model\Cache\Cache::getCacheAdapter('redis');
+				$cache = Cache::getCacheAdapter('redis');
 				self::$internalCache[$key] = $cache->get('model.config.' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($key, $migrations) {
 					$item->expiresAfter(3600 * 24);
 					$item->tag('config');
 
-					\Model\Cache\Cache::registerInvalidation('tag', ['config'], 'redis');
+					Cache::registerInvalidation('tag', ['config'], 'redis');
 
 					return self::retrieveConfig($key, $migrations);
 				});
@@ -90,6 +91,14 @@ class Config
 	}
 
 	/**
+	 * @return bool
+	 */
+	private static function isCacheEnabled(): bool
+	{
+		return (InstalledVersions::isInstalled('model/cache') and InstalledVersions::isInstalled('model/redis') and \Model\Redis\Redis::isEnabled());
+	}
+
+	/**
 	 * Stores new config
 	 *
 	 * @param string $key
@@ -99,8 +108,23 @@ class Config
 	public static function set(string $key, array $config): void
 	{
 		$filepath = self::getConfigFilePath($key);
+		$fullConfig = self::retrieveConfig($key);
+		$fullConfig[self::getEnv()] = $config;
+		self::saveConfigFile($filepath, $fullConfig);
+		if (self::isCacheEnabled())
+			Cache::invalidate();
+	}
+
+	/**
+	 * @param string $filepath
+	 * @param array $config
+	 * @return void
+	 * @throws \Exception
+	 */
+	private static function saveConfigFile(string $filepath, array $config): void
+	{
 		if (!file_put_contents($filepath, "<?php\nreturn " . var_export($config, true) . ";\n"))
-			throw new \Exception('Error while writing config file for ' . $key);
+			throw new \Exception('Error while writing config file');
 	}
 
 	/**
@@ -154,8 +178,7 @@ class Config
 
 		if ($latestVersion !== null and $config['meta']['version'] !== $latestVersion) {
 			$config['meta']['version'] = $latestVersion;
-
-			self::set($key, $config);
+			self::saveConfigFile($filepath, $config);
 		}
 
 		return $config;
