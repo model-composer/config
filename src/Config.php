@@ -111,6 +111,8 @@ class Config
 		$fullConfig = self::retrieveConfig($key);
 		$fullConfig[self::getEnv()] = $config;
 		self::saveConfigFile($filepath, $fullConfig);
+		if (isset(self::$internalCache[$key]))
+			unset(self::$internalCache[$key]);
 		if (self::isCacheEnabled())
 			Cache::invalidate();
 	}
