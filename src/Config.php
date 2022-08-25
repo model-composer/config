@@ -127,6 +127,8 @@ class Config
 	{
 		if (!file_put_contents($filepath, "<?php\nreturn " . var_export($config, true) . ";\n"))
 			throw new \Exception('Error while writing config file');
+		if (function_exists('opcache_invalidate'))
+			opcache_invalidate($filepath);
 	}
 
 	/**
