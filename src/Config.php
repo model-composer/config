@@ -57,11 +57,15 @@ class Config
 				// I do not cache config for "redis" and "cache" libraries, or it would result in an infinite recursion
 
 				$cache = Cache::getCacheAdapter('redis');
-				self::$internalCache[$key] = $cache->get('model.config.' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($key, $migrations) {
+				self::$internalCache[$key] = $cache->get('model.config.' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($cache, $key, $migrations) {
 					$item->expiresAfter(3600 * 24);
-					$item->tag('config');
 
-					Cache::registerInvalidation('tag', ['config'], 'redis');
+					if (Cache::isTagAware($cache)) {
+						$item->tag('config');
+						Cache::registerInvalidation('tag', ['config'], 'redis');
+					} else {
+						Cache::registerInvalidation('keys', ['model.config.' . $key], 'redis');
+					}
 
 					return self::retrieveConfig($key, $migrations);
 				});
