@@ -122,6 +122,15 @@ class Config
 	}
 
 	/**
+	 * @return void
+	 */
+	public static function resetCache(): void
+	{
+		self::$envLoaded = false;
+		self::$internalCache = [];
+	}
+
+	/**
 	 * @param string $filepath
 	 * @param array $config
 	 * @return void
