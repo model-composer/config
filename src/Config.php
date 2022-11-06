@@ -1,7 +1,8 @@
 <?php namespace Model\Config;
 
 use Composer\InstalledVersions;
-use Model\Cache\Cache as Cache;
+use Model\Cache\Cache;
+use Model\ProvidersFinder\Providers;
 use Symfony\Component\Dotenv\Dotenv;
 
 class Config
@@ -41,44 +42,79 @@ class Config
 	}
 
 	/**
-	 * Get specified config; if not present, gets the default
+	 * Get config from specified package
 	 *
-	 * @param string $key
-	 * @param array $migrations
+	 * @param string $package
+	 * @return array|null
+	 * @throws \Exception
+	 */
+	public static function get(string $package): ?array
+	{
+		if (!str_contains($package, '/')) // Not a full package name, defaults to model/ namespace
+			$package = 'model/' . $package;
+
+		$providers = Providers::find('ConfigProvider');
+		foreach ($providers as $provider) {
+			if ($provider['package'] === $package) {
+				$key = $provider::getConfigKey();
+				if (!$key and str_starts_with($package, 'model/'))
+					$provider::setConfigKey(substr($package, 6));
+				return self::getFromProvider($provider['provider']);
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Get config from passed provider; if config is not present, gets the default
+	 *
+	 * @param string<AbstractConfigProvider> $provider
 	 * @return array
 	 * @throws \Exception
 	 */
-	public static function get(string $key, array $migrations = [], array $enableTemplating = []): array
+	public static function getFromProvider(string $provider): array
 	{
+		$key = $provider::getConfigKey();
+		if (!$key)
+			throw new \Exception('No config key returned from provider ' . $provider);
+
 		// If it's the first time for this run I'm requesting this config
 		if (!isset(self::$internalCache[$key])) {
-			if (!in_array($key, ['redis', 'cache']) and self::isCacheEnabled()) {
-				// If there is a redis caching library installed, I use it to retrieve it (or store it) from there
-				// I do not cache config for "redis" and "cache" libraries, or it would result in an infinite recursion
+			$migrations = $provider::migrations();
 
-				$cache = Cache::getCacheAdapter('redis');
-				self::$internalCache[$key] = $cache->get('model.config.' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($cache, $key, $migrations) {
-					$item->expiresAfter(3600 * 24);
+			if ($migrations) {
+				if (!in_array($key, ['redis', 'cache']) and self::isCacheEnabled()) {
+					// If there is a redis caching library installed, I use it to retrieve it (or store it) from there
+					// I do not cache config for "redis" and "cache" libraries, or it would result in an infinite recursion
 
-					if (Cache::isTagAware($cache)) {
-						$item->tag('config');
-						Cache::registerInvalidation('tag', ['config'], 'redis');
-					} else {
-						Cache::registerInvalidation('keys', ['model.config.' . $key], 'redis');
-					}
+					$cache = Cache::getCacheAdapter('redis');
+					self::$internalCache[$key] = $cache->get('model.config.' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($cache, $key, $migrations) {
+						$item->expiresAfter(3600 * 24);
 
-					return self::retrieveConfig($key, $migrations);
-				});
+						if (Cache::isTagAware($cache)) {
+							$item->tag('config');
+							Cache::registerInvalidation('tag', ['config'], 'redis');
+						} else {
+							Cache::registerInvalidation('keys', ['model.config.' . $key], 'redis');
+						}
+
+						return self::retrieveConfig($key, $migrations);
+					});
+				} else {
+					// Otherwise I just retrieve it from file
+					self::$internalCache[$key] = self::retrieveConfig($key, $migrations);
+				}
 			} else {
-				// Otherwise I just retrieve it from file
-				self::$internalCache[$key] = self::retrieveConfig($key, $migrations);
+				self::$internalCache[$key] = [];
 			}
 		}
 
 		$env = self::getEnv();
 		$config = self::$internalCache[$key][$env] ?? self::$internalCache[$key]['production'] ?? [];
 
-		foreach ($enableTemplating as $path => $valueType) {
+		$templating = $provider::templating();
+		foreach ($templating as $path => $valueType) {
 			if (is_numeric($path)) {
 				$path = $valueType;
 				$valueType = 'string';

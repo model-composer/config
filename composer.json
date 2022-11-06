@@ -14,7 +14,8 @@
     "require": {
         "php": "^8.0",
         "composer-runtime-api": "^2.1",
-        "symfony/dotenv": "^6.0"
+        "symfony/dotenv": "^6.0",
+        "model/providers-finder": "^0.2.2"
     },
     "suggest": {
         "model/cache": "You can optionally cache your configs to redis via this library"
