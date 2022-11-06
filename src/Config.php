@@ -9,6 +9,7 @@ class Config
 {
 	private static bool $envLoaded = false;
 	private static array $internalCache = [];
+	private static array $packagesProvidersMapping = [];
 
 	/**
 	 * Load variables from .env file, if present
@@ -53,12 +54,21 @@ class Config
 		if (!str_contains($package, '/')) // Not a full package name, defaults to model/ namespace
 			$package = 'model/' . $package;
 
+		if (isset(self::$packagesProvidersMapping[$package]))
+			return self::getFromProvider(self::$packagesProvidersMapping[$package]['provider'], self::$packagesProvidersMapping[$package]['key']);
+
 		$providers = Providers::find('ConfigProvider');
 		foreach ($providers as $provider) {
 			if ($provider['package'] === $package) {
 				$key = $provider['provider']::getConfigKey();
 				if (!$key and str_starts_with($package, 'model/'))
 					$key = substr($package, 6);
+
+				self::$packagesProvidersMapping[$package] = [
+					'provider' => $provider['provider'],
+					'key' => $key,
+				];
+
 				return self::getFromProvider($provider['provider'], $key);
 			}
 		}
