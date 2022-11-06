@@ -56,10 +56,10 @@ class Config
 		$providers = Providers::find('ConfigProvider');
 		foreach ($providers as $provider) {
 			if ($provider['package'] === $package) {
-				$key = $provider::getConfigKey();
+				$key = $provider['provider']::getConfigKey();
 				if (!$key and str_starts_with($package, 'model/'))
-					$provider::setConfigKey(substr($package, 6));
-				return self::getFromProvider($provider['provider']);
+					$key = substr($package, 6);
+				return self::getFromProvider($provider['provider'], $key);
 			}
 		}
 
@@ -70,12 +70,13 @@ class Config
 	 * Get config from passed provider; if config is not present, gets the default
 	 *
 	 * @param string<AbstractConfigProvider> $provider
+	 * @param string|null $key
 	 * @return array
 	 * @throws \Exception
 	 */
-	public static function getFromProvider(string $provider): array
+	public static function getFromProvider(string $provider, ?string $key = null): array
 	{
-		$key = $provider::getConfigKey();
+		$key ??= $provider::getConfigKey();
 		if (!$key)
 			throw new \Exception('No config key returned from provider ' . $provider);
 
