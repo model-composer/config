@@ -1,5 +1,6 @@
 <?php namespace Model\Config\Providers;
 
+use Model\Config\Config;
 use Model\Core\AbstractModelProvider;
 
 class ModelProvider extends AbstractModelProvider
