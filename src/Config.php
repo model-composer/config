@@ -147,6 +147,8 @@ class Config
 		if (InstalledVersions::isInstalled('model/cache') and InstalledVersions::isInstalled('model/redis') and \Model\Redis\Redis::isEnabled()) {
 			$config = self::get('cache');
 			return $config['default_adapter'] === 'redis';
+		} else {
+			return false;
 		}
 	}
 
