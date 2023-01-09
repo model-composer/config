@@ -103,12 +103,8 @@ class Config
 					self::$internalCache[$key] = $cache->get('model.config.' . $key, function (\Symfony\Contracts\Cache\ItemInterface $item) use ($cache, $key, $migrations) {
 						$item->expiresAfter(3600 * 24);
 
-						if (Cache::isTagAware($cache)) {
+						if (Cache::isTagAware($cache))
 							$item->tag('config');
-							Cache::registerInvalidation('tag', ['config'], 'redis');
-						} else {
-							Cache::registerInvalidation('keys', ['model.config.' . $key], 'redis');
-						}
 
 						return self::retrieveConfig($key, $migrations);
 					});
@@ -142,11 +138,16 @@ class Config
 	}
 
 	/**
+	 * Config cache is enabled only if redis is used as adapter (wouldn't make sense to store it in files)
+	 *
 	 * @return bool
 	 */
 	private static function isCacheEnabled(): bool
 	{
-		return (InstalledVersions::isInstalled('model/cache') and InstalledVersions::isInstalled('model/redis') and \Model\Redis\Redis::isEnabled());
+		if (InstalledVersions::isInstalled('model/cache') and InstalledVersions::isInstalled('model/redis') and \Model\Redis\Redis::isEnabled()) {
+			$config = self::get('cache');
+			return $config['default_adapter'] === 'redis';
+		}
 	}
 
 	/**
@@ -165,7 +166,7 @@ class Config
 		if (isset(self::$internalCache[$key]))
 			unset(self::$internalCache[$key]);
 		if (self::isCacheEnabled())
-			Cache::invalidate();
+			Cache::clear();
 	}
 
 	/**
