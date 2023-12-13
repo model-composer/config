@@ -14,7 +14,7 @@
     "require": {
         "php": "^8.0",
         "composer-runtime-api": "^2.1",
-        "symfony/dotenv": "^6.0",
+        "symfony/dotenv": "^7.0",
         "model/providers-finder": "^0.3.0"
     },
     "suggest": {
